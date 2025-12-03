@@ -97,7 +97,7 @@ publishing {
             packaging = 'jar'
             name = 'Artifactural'
             description = 'A Gradle artifact processing and management tool'
-            url = 'https://github.com/MinecraftForge/Artifactural/'
+            url = 'https://github.com/kappa-maintainer/Artifactural/'
 
             gradleutils.pom.setGitHubDetails(pom, 'Artifactural')
 
@@ -106,8 +106,16 @@ publishing {
     }
 
     repositories {
-        maven gradleutils.publishingForgeMaven
+        maven {
+            name = "outlandsReleases"
+            url = "https://maven.outlands.top/releases"
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
     }
+
 }
 
 changelog {
