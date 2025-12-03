@@ -108,15 +108,6 @@ public class RepositoryContentUtils {
             return moduleComponentIdentifier;
         }
 
-        @Override
-        public AttributeContainer getConsumerAttributes() {
-            return ImmutableAttributes.EMPTY;
-        }
-
-        @Override
-        public String getConsumerName() {
-            return "artifacturalContentConsumer";
-        }
 
         @Override
         public boolean isVersionListing() {

@@ -56,7 +56,6 @@ import org.gradle.internal.component.external.model.MutableModuleComponentResolv
 import org.gradle.internal.component.model.ComponentArtifactMetadata;
 import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
 import org.gradle.internal.component.model.ComponentOverrideMetadata;
-import org.gradle.internal.component.model.ComponentResolveMetadata;
 import org.gradle.internal.component.model.ModuleSources;
 import org.gradle.internal.nativeintegration.filesystem.FileSystem;
 import org.gradle.internal.nativeintegration.services.FileSystems;
@@ -234,49 +233,19 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
                     }
 
                     private ModuleComponentResolveMetadata getMetadata(BuildableModuleComponentMetaDataResolveResult result) {
-                        return GradleVersion.current().compareTo(GradleVersion.version("8.2")) >= 0
-                                ? this.getMetadataGradle8_2Above(result)
-                                : this.getMetadataGradle8_1Below(result);
-                    }
-
-                    private ModuleComponentResolveMetadata getMetadataGradle8_2Above(BuildableModuleComponentMetaDataResolveResult result) {
-                        // This cast is actually safe, because we know the typing of the generics is <ModuleComponentResolveMetadata>
-                        // We explicitly don't use the generics because they don't exist on Gradle versions 8.1.* and lower
-                        return (ModuleComponentResolveMetadata) result.getMetaData();
-                    }
-
-                    // DO NOT TOUCH
-                    // This method is modified by ASM in build.gradle
-                    private ModuleComponentResolveMetadata getMetadataGradle8_1Below(BuildableModuleComponentMetaDataResolveResult result) {
-                        // Descriptor of getMetaData is changed to ()Lorg/gradle/internal/component/external/model/ModuleComponentResolveMetadata;
                         return (ModuleComponentResolveMetadata) result.getMetaData();
                     }
 
                     @Override
-                    public void listModuleVersions(ModuleDependencyMetadata dependency, BuildableModuleVersionListingResolveResult result) {
-                        delegate.listModuleVersions(dependency, result);
-                    }
-
-                    // DO NOT TOUCH
-                    // Gradle 8.13 changed the first argument from ModuleDependencyMetadata to ModuleComponentSelector and added a new argument ComponentOverrideMetadata
-                    // https://github.com/gradle/gradle/commit/7f120d813df21b0d24f403180629f51ba0f8ee4c
-                    @SuppressWarnings("unused")
                     public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
-                        //ASM in build.gradle adds the delegate call
+                        delegate.listModuleVersions(selector, overrideMetadata, result);
                     }
 
-                    @Override
-                    public void resolveArtifactsWithType(ComponentResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
-                        delegate.resolveArtifactsWithType(component, artifactType, result);
-                    }
-
-                    // DO NOT TOUCH
-                    // Gradle 8.9 changed the first argument from ComponentResolveMetadata to ComponentArtifactResolveMetadata
-                    // https://github.com/gradle/gradle/commit/90f772b5d4b5599653d435e9f10d364a5599608d
+                    
                     @SuppressWarnings("unused")
                     public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
                         //ASM In build.gradle changes the first parameter and method descriptor
-                        delegate.resolveArtifactsWithType(null/*component*/, artifactType, result);
+                        delegate.resolveArtifactsWithType(component, artifactType, result);
                     }
 
                     @Override

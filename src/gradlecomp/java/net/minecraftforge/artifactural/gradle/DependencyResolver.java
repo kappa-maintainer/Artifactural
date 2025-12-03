@@ -22,7 +22,6 @@ package net.minecraftforge.artifactural.gradle;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.ClientModule;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.Dependency;
 import org.gradle.api.artifacts.DependencyArtifact;
@@ -107,9 +106,6 @@ public class DependencyResolver {
      */
     public Set<File> resolveDependency(Object dependency, boolean transitive) {
         Dependency dep = project.getDependencies().create(dependency);
-        if (dep instanceof ClientModule) {
-            dep = ((ClientModule) dep).copy().setTransitive(transitive);
-        }
         return resolveDependency(dep);
     }
 
