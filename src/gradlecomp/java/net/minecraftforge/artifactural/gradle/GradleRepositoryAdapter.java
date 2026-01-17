@@ -85,12 +85,12 @@ import java.util.regex.Pattern;
 public class GradleRepositoryAdapter extends AbstractArtifactRepository implements ResolutionAwareRepository {
 
     private static final Pattern URL_PATTERN = Pattern.compile(
-            "^(?<group>\\S+(?:/\\S+)*)/(?<name>\\S+)/(?<version>\\S+)/" +
-                    "\\2-\\3(?:-(?<classifier>[^.\\s]+))?\\.(?<extension>\\S+)$");
+        "^(?<group>\\S+(?:/\\S+)*)/(?<name>\\S+)/(?<version>\\S+)/" +
+            "\\2-\\3(?:-(?<classifier>[^.\\s]+))?\\.(?<extension>\\S+)$");
 
     public static GradleRepositoryAdapter add(RepositoryHandler handler, String name, File local, Repository repository) {
         BaseRepositoryFactory factory = ReflectionUtils.get(handler, "repositoryFactory"); // We reflect here and create it manually so it DOESN'T get attached.
-        DefaultMavenLocalArtifactRepository maven = (DefaultMavenLocalArtifactRepository)factory.createMavenLocalRepository(); // We use maven local because it bypasses the caching and coping to .m2
+        DefaultMavenLocalArtifactRepository maven = (DefaultMavenLocalArtifactRepository) factory.createMavenLocalRepository(); // We use maven local because it bypasses the caching and coping to .m2
         maven.setUrl(local);
         maven.setName(name);
         maven.metadataSources(m -> {
@@ -111,7 +111,7 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
     private final DefaultMavenLocalArtifactRepository local;
     private final String root;
     private final LocatedArtifactCache cache;
-    
+
     private GradleRepositoryAdapter(Repository repository, DefaultMavenLocalArtifactRepository local, VersionParser versionParser) {
         super(getObjectFactory(local), versionParser);
         this.repository = repository;
@@ -136,9 +136,9 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
     public @NonNull ConfiguredModuleComponentRepository createResolver() {
-        MavenResolver resolver = (MavenResolver)local.createResolver();
+        MavenResolver resolver = (MavenResolver) local.createResolver();
 
-        GeneratingFileResourceRepository  repo = new GeneratingFileResourceRepository();
+        GeneratingFileResourceRepository repo = new GeneratingFileResourceRepository();
         ReflectionUtils.alter(resolver, "repository", prev -> repo);  // ExternalResourceResolver.repository
         //ReflectionUtils.alter(resolver, "metadataSources", ); //ExternalResourceResolver.metadataSources We need to fix these from returning 'missing'
         // MavenResolver -> MavenMetadataLoader -> FileCacheAwareExternalResourceAccessor -> DefaultCacheAwareExternalResourceAccessor
@@ -154,25 +154,61 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
         return new ConfiguredModuleComponentRepository() {
             private final ModuleComponentRepositoryAccess local = wrap(resolver.getLocalAccess());
             private final ModuleComponentRepositoryAccess remote = wrap(resolver.getRemoteAccess());
-            @Override public @NonNull String getId() { return resolver.getId(); }
-            @Override public @NonNull String getName() { return resolver.getName(); }
-            @Override public @NonNull ModuleComponentRepositoryAccess getLocalAccess() { return local; }
-            @Override public @NonNull ModuleComponentRepositoryAccess getRemoteAccess() { return remote; }
-            @Override public @NonNull Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() { return resolver.getArtifactCache(); }
-            @Override public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() { return resolver.getComponentMetadataSupplier(); }
-            @Override public boolean isDynamicResolveMode() { return resolver.isDynamicResolveMode(); }
-            @Override public boolean isLocal() { return resolver.isLocal(); }
 
             @Override
-            public void setComponentResolvers(@NonNull ComponentResolvers resolver) { }
+            public @NonNull String getId() {
+                return resolver.getId();
+            }
+
+            @Override
+            public @NonNull String getName() {
+                return resolver.getName();
+            }
+
+            @Override
+            public @NonNull ModuleComponentRepositoryAccess getLocalAccess() {
+                return local;
+            }
+
+            @Override
+            public @NonNull ModuleComponentRepositoryAccess getRemoteAccess() {
+                return remote;
+            }
+
+            @Override
+            public @NonNull Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() {
+                return resolver.getArtifactCache();
+            }
+
+            @Override
+            public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() {
+                return resolver.getComponentMetadataSupplier();
+            }
+
+            @Override
+            public boolean isDynamicResolveMode() {
+                return resolver.isDynamicResolveMode();
+            }
+
+            @Override
+            public boolean isLocal() {
+                return resolver.isLocal();
+            }
+
+            @Override
+            public void setComponentResolvers(@NonNull ComponentResolvers resolver) {
+            }
+
             @Override
             public @NonNull Instantiator getComponentMetadataInstantiator() {
                 return resolver.getComponentMetadataInstantiator();
             }
+
             @Override
             public boolean isRepositoryDisabled() {
                 return resolver.isRepositoryDisabled();
             }
+
             @Override
             public boolean isContinueOnConnectionFailure() {
                 return resolver.isContinueOnConnectionFailure();
@@ -207,7 +243,7 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
                         delegate.listModuleVersions(selector, overrideMetadata, result);
                     }
 
-                    
+
                     @SuppressWarnings("unused")
                     public void resolveArtifactsWithType(@NonNull ComponentArtifactResolveMetadata component, @NonNull ArtifactType artifactType, @NonNull BuildableArtifactSetResolveResult result) {
                         //ASM In build.gradle changes the first parameter and method descriptor
@@ -247,9 +283,11 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
 
     private class GeneratingFileResourceRepository implements FileResourceRepository {
         private final FileSystem fileSystem = FileSystems.getDefault();
+
         private void debug(String message) {
             //System.out.println(message);
         }
+
         private void log(String message) {
             System.out.println(message);
         }
