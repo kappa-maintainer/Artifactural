@@ -51,7 +51,6 @@ import org.gradle.api.internal.component.ArtifactType;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.internal.action.InstantiatingAction;
 import org.gradle.internal.component.external.model.ModuleComponentResolveMetadata;
-import org.gradle.internal.component.external.model.ModuleDependencyMetadata;
 import org.gradle.internal.component.external.model.MutableModuleComponentResolveMetadata;
 import org.gradle.internal.component.model.ComponentArtifactMetadata;
 import org.gradle.internal.component.model.ComponentArtifactResolveMetadata;
@@ -72,7 +71,7 @@ import org.gradle.internal.resource.local.LocalFileStandInExternalResource;
 import org.gradle.internal.resource.local.LocallyAvailableExternalResource;
 import org.gradle.internal.resource.metadata.ExternalResourceMetaData;
 import org.gradle.internal.resource.transfer.DefaultCacheAwareExternalResourceAccessor;
-import org.gradle.util.GradleVersion;
+import org.jspecify.annotations.NonNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -101,13 +100,7 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
 
         final GradleRepositoryAdapter repo;
 
-        if (GradleVersion.current().compareTo(GradleVersion.version("7.6")) >= 0) {
-            // If we are on gradle 7.6+ we want to use the super constructor with 2 arguments (with the VersionParser)
-            repo = new GradleRepositoryAdapter(repository, maven, getVersionParser(maven));
-        } else {
-            // If we are on gradle 4.10 - 7.5 we use the super constructor with only the ObjectFactory parameter
-            repo = new GradleRepositoryAdapter(repository, maven);
-        }
+        repo = new GradleRepositoryAdapter(repository, maven, getVersionParser(maven));
 
         repo.setName(name);
         handler.add(repo);
@@ -118,22 +111,7 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
     private final DefaultMavenLocalArtifactRepository local;
     private final String root;
     private final LocatedArtifactCache cache;
-
-
-    // This constructor is modified via bytecode manipulation in 'build.gradle'
-    // DO NOT change this without modifying 'build.gradle'
-    // This constructor is used on Gradle 7.5.* and below
-    @Deprecated // TODO - remove this constructor when we can break ABI compatibility
-    private GradleRepositoryAdapter(Repository repository, DefaultMavenLocalArtifactRepository local) {
-        // This is replaced with a call to 'super(getObjectFactory(local))'
-        super(getObjectFactory(local), null);
-        this.repository = repository;
-        this.local = local;
-        this.root = cleanRoot(local.getUrl());
-        this.cache = new LocatedArtifactCache(new File(root));
-    }
-
-    // This constructor is used on Gradle 7.6 and above
+    
     private GradleRepositoryAdapter(Repository repository, DefaultMavenLocalArtifactRepository local, VersionParser versionParser) {
         super(getObjectFactory(local), versionParser);
         this.repository = repository;
@@ -147,22 +125,17 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
     }
 
     private static VersionParser getVersionParser(DefaultMavenLocalArtifactRepository maven) {
-        if (GradleVersion.current().compareTo(GradleVersion.version("8.7-rc-1")) >= 0) {
-            // 8.7 RC 1 Removed the versionParser field directly, so find it from AbstractArtifactRepository
-            // https://github.com/gradle/gradle/commit/4604475e2237910ea0a1b697f4e7d5d0d4c74431
-            return ReflectionUtils.get(maven, "repositoryContentDescriptor.versionParser");
-        }
-        return ReflectionUtils.get(maven, "versionParser");
+        return ReflectionUtils.get(maven, "repositoryContentDescriptor.versionParser");
     }
 
     @Override
-    public String getDisplayName() {
+    public @NonNull String getDisplayName() {
         return local.getDisplayName();
     }
 
     @Override
     @SuppressWarnings({"rawtypes", "unchecked"})
-    public ConfiguredModuleComponentRepository createResolver() {
+    public @NonNull ConfiguredModuleComponentRepository createResolver() {
         MavenResolver resolver = (MavenResolver)local.createResolver();
 
         GeneratingFileResourceRepository  repo = new GeneratingFileResourceRepository();
@@ -181,26 +154,34 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
         return new ConfiguredModuleComponentRepository() {
             private final ModuleComponentRepositoryAccess local = wrap(resolver.getLocalAccess());
             private final ModuleComponentRepositoryAccess remote = wrap(resolver.getRemoteAccess());
-            @Override public String getId() { return resolver.getId(); }
-            @Override public String getName() { return resolver.getName(); }
-            @Override public ModuleComponentRepositoryAccess getLocalAccess() { return local; }
-            @Override public ModuleComponentRepositoryAccess getRemoteAccess() { return remote; }
-            @Override public Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() { return resolver.getArtifactCache(); }
+            @Override public @NonNull String getId() { return resolver.getId(); }
+            @Override public @NonNull String getName() { return resolver.getName(); }
+            @Override public @NonNull ModuleComponentRepositoryAccess getLocalAccess() { return local; }
+            @Override public @NonNull ModuleComponentRepositoryAccess getRemoteAccess() { return remote; }
+            @Override public @NonNull Map<ComponentArtifactIdentifier, ResolvableArtifact> getArtifactCache() { return resolver.getArtifactCache(); }
             @Override public InstantiatingAction<ComponentMetadataSupplierDetails> getComponentMetadataSupplier() { return resolver.getComponentMetadataSupplier(); }
             @Override public boolean isDynamicResolveMode() { return resolver.isDynamicResolveMode(); }
             @Override public boolean isLocal() { return resolver.isLocal(); }
 
             @Override
-            public void setComponentResolvers(ComponentResolvers resolver) { }
+            public void setComponentResolvers(@NonNull ComponentResolvers resolver) { }
             @Override
-            public Instantiator getComponentMetadataInstantiator() {
+            public @NonNull Instantiator getComponentMetadataInstantiator() {
                 return resolver.getComponentMetadataInstantiator();
+            }
+            @Override
+            public boolean isRepositoryDisabled() {
+                return resolver.isRepositoryDisabled();
+            }
+            @Override
+            public boolean isContinueOnConnectionFailure() {
+                return resolver.isContinueOnConnectionFailure();
             }
 
             private ModuleComponentRepositoryAccess wrap(ModuleComponentRepositoryAccess delegate) {
                 return new ModuleComponentRepositoryAccess() {
                     @Override
-                    public void resolveComponentMetaData(ModuleComponentIdentifier moduleComponentIdentifier, ComponentOverrideMetadata requestMetaData, BuildableModuleComponentMetaDataResolveResult result) {
+                    public void resolveComponentMetaData(@NonNull ModuleComponentIdentifier moduleComponentIdentifier, @NonNull ComponentOverrideMetadata requestMetaData, @NonNull BuildableModuleComponentMetaDataResolveResult result) {
                         delegate.resolveComponentMetaData(moduleComponentIdentifier, requestMetaData, result);
                         if (result.getState() == BuildableModuleComponentMetaDataResolveResult.State.Resolved) {
                             ModuleComponentResolveMetadata meta = getMetadata(result);
@@ -214,21 +195,6 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
                     }
 
                     private void setResultResolved(BuildableModuleComponentMetaDataResolveResult result, ModuleComponentResolveMetadata meta) {
-                        if (GradleVersion.current().compareTo(GradleVersion.version("8.2")) >= 0) {
-                            this.setResultResolvedGradle8_2Above(result, meta);
-                        } else {
-                            this.setResultResolvedGradle8_1Below(result, meta);
-                        }
-                    }
-
-                    private void setResultResolvedGradle8_2Above(BuildableModuleComponentMetaDataResolveResult result, ModuleComponentResolveMetadata meta) {
-                        result.resolved(meta);
-                    }
-
-                    // DO NOT TOUCH
-                    // This method is modified by ASM in build.gradle
-                    private void setResultResolvedGradle8_1Below(BuildableModuleComponentMetaDataResolveResult result, ModuleComponentResolveMetadata meta) {
-                        // Descriptor of resolved is changed to (Lorg/gradle/internal/component/external/model/ModuleComponentResolveMetadata;)V
                         result.resolved(meta);
                     }
 
@@ -237,24 +203,24 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
                     }
 
                     @Override
-                    public void listModuleVersions(ModuleComponentSelector selector, ComponentOverrideMetadata overrideMetadata, BuildableModuleVersionListingResolveResult result) {
+                    public void listModuleVersions(@NonNull ModuleComponentSelector selector, @NonNull ComponentOverrideMetadata overrideMetadata, @NonNull BuildableModuleVersionListingResolveResult result) {
                         delegate.listModuleVersions(selector, overrideMetadata, result);
                     }
 
                     
                     @SuppressWarnings("unused")
-                    public void resolveArtifactsWithType(ComponentArtifactResolveMetadata component, ArtifactType artifactType, BuildableArtifactSetResolveResult result) {
+                    public void resolveArtifactsWithType(@NonNull ComponentArtifactResolveMetadata component, @NonNull ArtifactType artifactType, @NonNull BuildableArtifactSetResolveResult result) {
                         //ASM In build.gradle changes the first parameter and method descriptor
                         delegate.resolveArtifactsWithType(component, artifactType, result);
                     }
 
                     @Override
-                    public void resolveArtifact(ComponentArtifactMetadata componentArtifactMetadata, ModuleSources moduleSources, BuildableArtifactFileResolveResult buildableArtifactFileResolveResult) {
+                    public void resolveArtifact(@NonNull ComponentArtifactMetadata componentArtifactMetadata, @NonNull ModuleSources moduleSources, @NonNull BuildableArtifactFileResolveResult buildableArtifactFileResolveResult) {
                         delegate.resolveArtifact(componentArtifactMetadata, moduleSources, buildableArtifactFileResolveResult);
                     }
 
                     @Override
-                    public MetadataFetchingCost estimateMetadataFetchingCost(ModuleComponentIdentifier moduleComponentIdentifier) {
+                    public @NonNull MetadataFetchingCost estimateMetadataFetchingCost(@NonNull ModuleComponentIdentifier moduleComponentIdentifier) {
                         return delegate.estimateMetadataFetchingCost(moduleComponentIdentifier);
                     }
                 };
@@ -262,21 +228,7 @@ public class GradleRepositoryAdapter extends AbstractArtifactRepository implemen
         };
     }
 
-    public RepositoryDescriptor getDescriptor() {
-        return GradleVersion.current().compareTo(GradleVersion.version("8.2")) >= 0
-                ? this.getDescriptorGradle8_2Above()
-                : this.getDescriptorGradle8_1Below();
-    }
-
-    // DO NOT TOUCH
-    // This method is used on Gradle 8.1.* and below
-    // It is modified by ASM in build.gradle
-    private RepositoryDescriptor getDescriptorGradle8_1Below() {
-        // Replaced by FlatDirRepositoryDescriptor(String, List) with ASM
-        return new FlatDirRepositoryDescriptor("ArtifacturalRepository", new ArrayList<>(), null);
-    }
-
-    private RepositoryDescriptor getDescriptorGradle8_2Above() {
+    public @NonNull RepositoryDescriptor getDescriptor() {
         IvyRepositoryDescriptor.Builder builder = new IvyRepositoryDescriptor.Builder("ArtifacturalRepository", null);
         builder.setM2Compatible(false);
         builder.setLayoutType("Unknown");
